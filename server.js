@@ -2,6 +2,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomBytes, createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { networkInterfaces } from 'node:os';
 
 const random = () => randomBytes(32).toString('base64url');
 const ttl = 15 * 60 * 1000;
@@ -42,7 +43,17 @@ export function inspectToken(data, session) {
   return { checks, decoded };
 }
 
-export function createApp() {
+export function createApp({ host = process.env.HOST || '127.0.0.1' } = {}) {
+  const allowedHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
+  if (host === '0.0.0.0' || host === '::') {
+    for (const addresses of Object.values(networkInterfaces())) {
+      for (const { address, family } of addresses || []) {
+        if (!address.includes('%')) allowedHosts.add(family === 'IPv6' ? `[${address}]` : address);
+      }
+    }
+  } else {
+    allowedHosts.add(host.includes(':') ? `[${host}]` : host.toLowerCase());
+  }
   const sessions = new Map();
   const sweep = setInterval(() => {
     for (const [id, s] of sessions) if (s.expires < Date.now()) sessions.delete(id);
@@ -55,9 +66,13 @@ export function createApp() {
     const json = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); };
     const redirect = location => { res.writeHead(303, { Location: location }); res.end(); };
     try {
-      const host = req.headers.host || '';
-      if (!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return json(403, { error: '로컬 주소로 접속해 주세요.' });
-      const origin = `http://${host}`;
+      const authority = req.headers.host || '';
+      const address = new URL(`http://${authority}`);
+      const validAuthority = address.host === authority.toLowerCase() || authority.toLowerCase() === `${address.hostname}:80`;
+      if (!validAuthority || !allowedHosts.has(address.hostname) || Number(address.port || 80) !== req.socket.localPort) {
+        return json(403, { error: '허용되지 않은 접속 주소입니다. 서버 실행 시 HOST에 접속할 IP를 지정해 주세요. 모든 PC IP를 허용하려면 HOST=0.0.0.0을 사용하세요.' });
+      }
+      const origin = address.origin;
       const url = new URL(req.url, origin);
       const id = req.headers.cookie?.split(';').map(v => v.trim()).find(v => v.startsWith('oidc_session='))?.slice(13);
       let session = sessions.get(id);
@@ -145,5 +160,10 @@ export function createApp() {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const port = Number(process.env.PORT || 3000);
-  createApp().listen(port, '127.0.0.1', () => console.log(`OIDC Lab → http://localhost:${port}`));
+  const host = process.env.HOST || '127.0.0.1';
+  createApp({ host }).listen(port, host, () => {
+    const displayHost = host === '127.0.0.1' ? 'localhost' : host.includes(':') ? `[${host}]` : host;
+    console.log(`OIDC Lab → http://${displayHost}:${port}`);
+    if (host === '0.0.0.0' || host === '::') console.log('브라우저에서는 0.0.0.0 대신 이 PC의 IP 주소로 접속하세요.');
+  });
 }

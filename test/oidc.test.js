@@ -3,9 +3,41 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { createHash } from 'node:crypto';
 import { createApp } from '../server.js';
+import { networkInterfaces } from 'node:os';
 
 const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)));
 const jwt = payload => `${Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url')}.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.test-signature`;
+
+test('설정된 IP의 접속 및 요청은 허용하고 다른 Host와 Origin은 차단', async t => {
+  const app = createApp({ host: '192.168.0.10' });
+  t.after(() => app.close());
+  const origin = await listen(app);
+  const port = app.address().port;
+  const address = `192.168.0.10:${port}`;
+  const request = (host, requestOrigin = `http://${host}`) => new Promise((resolve, reject) => {
+    const req = http.request(`${origin}/api/reset`, {
+      method: 'POST', headers: { Host: host, Origin: requestOrigin, 'Content-Type': 'application/json' },
+    }, res => { res.resume(); res.on('end', () => resolve(res.statusCode)); });
+    req.on('error', reject); req.end('{}');
+  });
+  assert.equal(await request(address), 200);
+  assert.equal(await request(`localhost:${port}`), 200);
+  assert.equal(await request(`untrusted.example:${port}`), 403);
+  assert.equal(await request('192.168.0.10:1'), 403);
+  assert.equal(await request(address, 'http://other.example'), 403);
+});
+
+test('전체 인터페이스 바인딩은 실제 PC IP를 허용', async t => {
+  const app = createApp({ host: '0.0.0.0' });
+  t.after(() => app.close());
+  await new Promise(resolve => app.listen(0, '0.0.0.0', resolve));
+  const addresses = Object.values(networkInterfaces()).flat().filter(item => item?.family === 'IPv4');
+  for (const { address } of addresses) {
+    const response = await fetch(`http://${address}:${app.address().port}/api/session`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { config: null, result: null });
+  }
+});
 
 test('Authorization Code 흐름: PKCE, 인증 방식, 응답 점검 및 오류 처리', async t => {
   let currentAuth;
