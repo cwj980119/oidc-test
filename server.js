@@ -3,11 +3,21 @@ import { readFile } from 'node:fs/promises';
 import { randomBytes, createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { networkInterfaces } from 'node:os';
+import { parseArgs } from 'node:util';
 
 const random = () => randomBytes(32).toString('base64url');
 const ttl = 15 * 60 * 1000;
 const encode = value => new URLSearchParams({ v: value }).toString().slice(2);
 const staticFiles = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
+
+export function parseLaunchOptions(args, env = process.env) {
+  const { values } = parseArgs({ args, options: { host: { type: 'string' }, port: { type: 'string' } } });
+  const host = (values.host ?? env.HOST ?? '127.0.0.1').trim();
+  const portText = values.port ?? env.PORT ?? '3000';
+  if (!host || /[\s/]/.test(host)) throw new Error('--host에는 IP 또는 호스트 이름을 입력해 주세요.');
+  if (!/^\d+$/.test(portText) || Number(portText) < 1 || Number(portText) > 65535) throw new Error('--port는 1~65535 사이의 정수여야 합니다.');
+  return { host, port: Number(portText) };
+}
 
 function endpoint(value, label) {
   let url;
@@ -70,7 +80,7 @@ export function createApp({ host = process.env.HOST || '127.0.0.1' } = {}) {
       const address = new URL(`http://${authority}`);
       const validAuthority = address.host === authority.toLowerCase() || authority.toLowerCase() === `${address.hostname}:80`;
       if (!validAuthority || !allowedHosts.has(address.hostname) || Number(address.port || 80) !== req.socket.localPort) {
-        return json(403, { error: '허용되지 않은 접속 주소입니다. 서버 실행 시 HOST에 접속할 IP를 지정해 주세요. 모든 PC IP를 허용하려면 HOST=0.0.0.0을 사용하세요.' });
+        return json(403, { error: '허용되지 않은 접속 주소입니다. 서버 실행 시 --host에 접속할 IP를 지정해 주세요. 모든 PC IP를 허용하려면 --host 0.0.0.0을 사용하세요.' });
       }
       const origin = address.origin;
       const url = new URL(req.url, origin);
@@ -159,11 +169,18 @@ export function createApp({ host = process.env.HOST || '127.0.0.1' } = {}) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const port = Number(process.env.PORT || 3000);
-  const host = process.env.HOST || '127.0.0.1';
-  createApp({ host }).listen(port, host, () => {
-    const displayHost = host === '127.0.0.1' ? 'localhost' : host.includes(':') ? `[${host}]` : host;
-    console.log(`OIDC Lab → http://${displayHost}:${port}`);
-    if (host === '0.0.0.0' || host === '::') console.log('브라우저에서는 0.0.0.0 대신 이 PC의 IP 주소로 접속하세요.');
-  });
+  try {
+    const { host, port } = parseLaunchOptions(process.argv.slice(2));
+    createApp({ host }).listen(port, host, () => {
+      const displayHost = host === '127.0.0.1' ? 'localhost' : host.includes(':') ? `[${host}]` : host;
+      console.log(`OIDC Lab → http://${displayHost}:${port}`);
+      if (host === '0.0.0.0' || host === '::') console.log('브라우저에서는 0.0.0.0 대신 이 PC의 IP 주소로 접속하세요.');
+    }).on('error', error => {
+      console.error(`서버 실행 실패: ${error.message}`);
+      process.exitCode = 1;
+    });
+  } catch (error) {
+    console.error(`서버 실행 실패: ${error.message}`);
+    process.exitCode = 1;
+  }
 }

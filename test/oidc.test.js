@@ -2,11 +2,21 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { createHash } from 'node:crypto';
-import { createApp } from '../server.js';
+import { createApp, parseLaunchOptions } from '../server.js';
 import { networkInterfaces } from 'node:os';
 
 const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)));
 const jwt = payload => `${Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url')}.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.test-signature`;
+
+test('실행 옵션: CLI 우선 적용, npm 추가 인자 덮어쓰기 및 잘못된 포트 거절', () => {
+  assert.deepEqual(parseLaunchOptions([], {}), { host: '127.0.0.1', port: 3000 });
+  assert.deepEqual(parseLaunchOptions(['--host', '0.0.0.0', '--port', '8080'], { HOST: '127.0.0.1', PORT: '9000' }), { host: '0.0.0.0', port: 8080 });
+  assert.deepEqual(parseLaunchOptions(['--port', '3000', '--port=8080', '--host=192.168.0.10'], {}), { host: '192.168.0.10', port: 8080 });
+  for (const port of ['0', '65536', '-1', '3.5', 'abc', '']) assert.throws(() => parseLaunchOptions([`--port=${port}`], {}));
+  assert.throws(() => parseLaunchOptions(['--host='], {}));
+  assert.throws(() => parseLaunchOptions(['--port'], {}));
+  assert.throws(() => parseLaunchOptions(['--unknown'], {}));
+});
 
 test('설정된 IP의 접속 및 요청은 허용하고 다른 Host와 Origin은 차단', async t => {
   const app = createApp({ host: '192.168.0.10' });
