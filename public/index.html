@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>OIDC Lab · OpenID Connect 테스트</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+  <header class="topbar"><a class="brand" href="/"><span class="logo">o<span>•</span></span>OIDC<span class="brand-light">Lab</span></a><span class="local"><i></i> LOCAL WORKSPACE</span><a class="docs" href="https://openid.net/specs/openid-connect-core-1_0.html" target="_blank" rel="noreferrer">OIDC 문서 ↗</a></header>
+  <main>
+    <div class="intro"><div><div class="eyebrow">DEVELOPER TOOLS / AUTHENTICATION</div><h1>로그인 흐름을 한눈에.</h1><p>OpenID Connect 요청을 보내고, 돌아온 응답을 확인하세요.</p></div><span class="protocol">Authorization Code + PKCE</span></div>
+    <div class="workspace">
+      <section class="card configuration"><div class="card-heading"><div><span class="section-number">01</span><h2>연결 설정</h2></div><span class="subtle">REQUEST</span></div>
+        <form id="config-form">
+          <label for="authorizationUrl">Authorization URL</label><input id="authorizationUrl" name="authorizationUrl" type="url" required placeholder="https://your-provider.com/oauth/authorize" autocomplete="off">
+          <label for="tokenUrl">Token URL</label><input id="tokenUrl" name="tokenUrl" type="url" required placeholder="https://your-provider.com/oauth/token" autocomplete="off">
+          <div class="separator"></div>
+          <label for="clientId">Client ID</label><input id="clientId" name="clientId" required placeholder="애플리케이션의 Client ID" autocomplete="off">
+          <label for="clientSecret">Client Secret</label><div class="password"><input id="clientSecret" name="clientSecret" type="password" placeholder="애플리케이션의 Client Secret" autocomplete="off"><button id="toggle-secret" type="button" aria-label="Client Secret 표시" aria-pressed="false">보기</button></div>
+          <p class="field-help">Secret은 파일이나 브라우저 저장소에 저장하지 않습니다.</p>
+          <div class="scope-heading"><label id="scope-label">Scope</label><button id="add-scope" class="text-button" type="button">+ 항목 추가</button></div>
+          <div id="scope-list" role="group" aria-labelledby="scope-label" aria-describedby="scope-help"></div>
+          <p id="scope-help" class="field-help">한 칸에 하나씩 입력하세요. openid는 필수 항목입니다.</p>
+          <label for="redirectUri">Redirect URI</label><input id="redirectUri" name="redirectUri" type="url" required><p class="field-help">인증 제공자에도 동일한 Redirect URI를 등록하세요.</p>
+          <details class="advanced"><summary>고급 설정</summary><label for="authMethod">Token Endpoint 인증 방식</label><select id="authMethod" name="authMethod"><option value="client_secret_basic">client_secret_basic (기본)</option><option value="client_secret_post">client_secret_post</option><option value="none">none · 공개 클라이언트</option></select></details>
+          <div id="form-error" class="error" role="alert" hidden></div>
+          <button class="primary" id="start" type="submit">로그인 테스트 시작 <span>↗</span></button>
+          <p class="form-note">인증 제공자의 로그인 화면으로 이동합니다.</p>
+        </form>
+      </section>
+      <div class="results-column">
+        <section class="card flow"><div class="card-heading"><div><span class="section-number">02</span><h2>인증 흐름</h2></div><span id="flow-status" class="badge">준비됨</span></div><ol class="steps"><li id="step-request"><span>1</span><strong>인증 요청</strong><small>Authorization</small></li><li id="step-callback"><span>2</span><strong>콜백 수신</strong><small>Authorization Code</small></li><li id="step-token"><span>3</span><strong>토큰 응답</strong><small>Token Exchange</small></li></ol></section>
+        <section class="card results"><div class="card-heading"><div><span class="section-number">03</span><h2>응답 확인</h2></div><button type="button" id="reset" class="text-button">초기화 ↺</button></div>
+          <div id="empty"><div class="empty-icon">{ <span>↙</span> }</div><h3>첫 번째 응답을 기다리고 있어요</h3><p>연결 정보를 입력하고 로그인 테스트를 시작하세요.<br>응답 원문과 ID Token 정보를 여기서 확인할 수 있습니다.</p><div class="empty-tags"><span>JSON 응답</span><span>토큰 클레임</span><span>기본 점검</span></div></div>
+          <div id="result" hidden><div id="result-summary" role="status"></div><div id="checks"></div><div class="tabs" role="tablist" aria-label="응답 보기"><button role="tab" aria-selected="true" aria-controls="payload-panel" id="tab-response" data-tab="response">토큰 응답</button><button role="tab" aria-selected="false" aria-controls="payload-panel" id="tab-decoded" data-tab="decoded" tabindex="-1">ID Token</button><button role="tab" aria-selected="false" aria-controls="payload-panel" id="tab-callback" data-tab="callback" tabindex="-1">콜백</button></div><div id="payload-panel" role="tabpanel" aria-labelledby="tab-response"><div class="code-toolbar"><span id="code-label">JSON</span><button class="text-button" id="copy" type="button">복사</button></div><pre id="payload" tabindex="0"></pre></div><p class="verification-note">ID Token은 디코딩 및 기본 항목만 점검합니다. 서명과 Issuer 신뢰성은 검증하지 않습니다.</p></div>
+        </section>
+        <details id="request-details" class="card request-details" hidden><summary>생성된 Authorization URL <span>↗</span></summary><pre id="request-url"></pre></details>
+        <p class="workspace-note"><span>ⓘ</span> 응답과 토큰은 현재 로컬 세션에서만 유지됩니다. 세션은 15분 후 만료됩니다.</p>
+      </div>
+    </div>
+    <footer><span>OIDC Lab <span class="footer-dot">/</span> 작고 간단한 인증 테스트 도구</span><span>LOCAL ONLY · NO DATABASE</span></footer>
+  </main>
+</body>
+</html>
