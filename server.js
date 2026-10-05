@@ -8,7 +8,7 @@ import { parseArgs } from 'node:util';
 const random = () => randomBytes(32).toString('base64url');
 const ttl = 15 * 60 * 1000;
 const encode = value => new URLSearchParams({ v: value }).toString().slice(2);
-const staticFiles = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
+const staticFiles = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/flow-model.js': ['flow-model.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
 
 export function parseLaunchOptions(args, env = process.env) {
   const { values } = parseArgs({ args, options: { host: { type: 'string' }, port: { type: 'string' } } });

@@ -1,7 +1,11 @@
+import { buildFlow } from './flow-model.js';
+
 const $ = id => document.getElementById(id);
 const form = $('config-form');
 let result = null;
 let activeTab = 'response';
+let flowData = {};
+let flowSteps = [];
 $('redirectUri').value = `${location.origin}/callback`;
 const fail = message => { $('form-error').textContent = message; $('form-error').hidden = false; };
 
@@ -66,15 +70,46 @@ function showTab(name) {
   $('payload').textContent = JSON.stringify(result?.[name] ?? (name === 'decoded' ? { message: '디코딩할 수 있는 ID Token이 없습니다.' } : { message: '수신된 데이터가 없습니다.' }), null, 2);
 }
 
+function selectFlow(index) {
+  const step = flowSteps[index];
+  $('journey-title').textContent = `${index + 1}. ${step.title}`;
+  $('journey-description').textContent = step.description;
+  $('journey-evidence').textContent = step.detail;
+  $('journey').querySelectorAll('button').forEach((button, i) => button.setAttribute('aria-pressed', String(index === i)));
+}
+
+function renderFlow() {
+  const config = flowData.config || Object.fromEntries(new FormData(form));
+  const flow = buildFlow(config, flowData);
+  flowSteps = flow.steps;
+  const labels = { waiting: '대기', done: '확인됨', external: '외부 단계', error: '확인 필요' };
+  $('journey').replaceChildren(...flowSteps.map((step, index) => {
+    const li = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `journey-step ${step.status}`;
+    button.setAttribute('aria-controls', 'journey-detail');
+    const number = document.createElement('span'); number.className = 'journey-number'; number.textContent = step.status === 'done' ? '✓' : String(index + 1);
+    const text = document.createElement('span'); text.className = 'journey-text';
+    const title = document.createElement('strong'); title.textContent = step.title;
+    const subtitle = document.createElement('small'); subtitle.textContent = step.subtitle;
+    const status = document.createElement('span'); status.className = 'journey-status'; status.textContent = labels[step.status];
+    text.append(title, subtitle); button.append(number, text, status);
+    button.addEventListener('click', () => selectFlow(index));
+    li.append(button); return li;
+  }));
+  selectFlow(flow.selected);
+}
+for (const id of ['authorizationUrl', 'tokenUrl', 'redirectUri']) $(id).addEventListener('input', () => { if (!flowData.requestUrl) renderFlow(); });
+
 function render(data) {
+  flowData = data;
+  renderFlow();
   result = data.result;
   $('request-details').hidden = !data.requestUrl;
   $('request-url').textContent = data.requestUrl || '';
   $('empty').hidden = !!result;
   $('result').hidden = !result;
-  $('step-request').classList.toggle('done', !!data.requestUrl);
-  $('step-callback').classList.toggle('done', !!result?.callback);
-  $('step-token').classList.toggle('done', !!result?.status);
   $('flow-status').className = 'badge';
   $('flow-status').textContent = data.requestUrl ? '인증 진행 중' : '준비됨';
   if (!result) return;

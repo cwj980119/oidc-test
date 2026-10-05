@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>OIDC Lab · OpenID Connect 테스트</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>OIDC Lab · OpenID Connect 테스트</title><link rel="stylesheet" href="/style.css"><script src="/app.js" type="module"></script></head>
 <body>
   <header class="topbar"><a class="brand" href="/"><span class="logo">o<span>•</span></span>OIDC<span class="brand-light">Lab</span></a><span class="local"><i></i> LOCAL WORKSPACE</span><a class="docs" href="https://openid.net/specs/openid-connect-core-1_0.html" target="_blank" rel="noreferrer">OIDC 문서 ↗</a></header>
   <main>
@@ -25,7 +25,12 @@
         </form>
       </section>
       <div class="results-column">
-        <section class="card flow"><div class="card-heading"><div><span class="section-number">02</span><h2>인증 흐름</h2></div><span id="flow-status" class="badge">준비됨</span></div><ol class="steps"><li id="step-request"><span>1</span><strong>인증 요청</strong><small>Authorization</small></li><li id="step-callback"><span>2</span><strong>콜백 수신</strong><small>Authorization Code</small></li><li id="step-token"><span>3</span><strong>토큰 응답</strong><small>Token Exchange</small></li></ol></section>
+        <section class="card flow"><div class="card-heading"><div><span class="section-number">02</span><h2>인증 여정</h2></div><span id="flow-status" class="badge">준비됨</span></div>
+          <p class="journey-intro">각 단계를 눌러 어디로 이동하고 무엇을 받는지 확인하세요.</p>
+          <ol id="journey" class="journey" aria-label="인증 단계"></ol>
+          <div id="journey-detail" class="journey-detail" aria-live="polite"><h3 id="journey-title"></h3><p id="journey-description"></p><p id="journey-evidence"></p></div>
+          <p class="journey-note">실제 결과는 콜백으로 돌아온 뒤 반영됩니다. 외부 IdP 단계는 흐름 안내이며 실시간 추적이 아닙니다.</p>
+        </section>
         <section class="card results"><div class="card-heading"><div><span class="section-number">03</span><h2>응답 확인</h2></div><button type="button" id="reset" class="text-button">초기화 ↺</button></div>
           <div id="empty"><div class="empty-icon">{ <span>↙</span> }</div><h3>첫 번째 응답을 기다리고 있어요</h3><p>연결 정보를 입력하고 로그인 테스트를 시작하세요.<br>응답 원문과 ID Token 정보를 여기서 확인할 수 있습니다.</p><div class="empty-tags"><span>JSON 응답</span><span>토큰 클레임</span><span>기본 점검</span></div></div>
           <div id="result" hidden><div id="result-summary" role="status"></div><div id="checks"></div><div class="tabs" role="tablist" aria-label="응답 보기"><button role="tab" aria-selected="true" aria-controls="payload-panel" id="tab-response" data-tab="response">토큰 응답</button><button role="tab" aria-selected="false" aria-controls="payload-panel" id="tab-decoded" data-tab="decoded" tabindex="-1">ID Token</button><button role="tab" aria-selected="false" aria-controls="payload-panel" id="tab-callback" data-tab="callback" tabindex="-1">콜백</button></div><div id="payload-panel" role="tabpanel" aria-labelledby="tab-response"><div class="code-toolbar"><span id="code-label">JSON</span><button class="text-button" id="copy" type="button">복사</button></div><pre id="payload" tabindex="0"></pre></div><p class="verification-note">ID Token은 디코딩 및 기본 항목만 점검합니다. 서명과 Issuer 신뢰성은 검증하지 않습니다.</p></div>

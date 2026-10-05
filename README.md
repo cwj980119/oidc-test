@@ -15,6 +15,8 @@ npm start
 3. **로그인 테스트 시작**을 누르고 인증 제공자에서 로그인합니다.
 4. 돌아온 화면에서 토큰 응답 JSON, ID Token의 header/payload, 콜백 파라미터, 기본 점검 결과를 확인합니다.
 
+**인증 여정**에서 각 단계를 클릭하면 앱 → 인증 서버/Keycloak → 외부 IdP → 앱 콜백 → 토큰 교환의 역할과 전달 정보를 볼 수 있습니다. Authorization URL에 `kc_idp_hint`가 있으면 해당 IdP 별칭을 표시합니다. 완료·오류 표시는 수신한 콜백과 토큰 결과를 기준으로 하며, 외부 IdP 내부 동작은 직접 추적하지 않습니다. 로그인 화면으로 이동한 동안에는 앱 화면이 보이지 않고, 돌아온 뒤 결과가 반영됩니다.
+
 Scope는 항목별 입력칸에 하나씩 입력합니다. **+ 항목 추가** 또는 Enter로 입력칸을 추가하고 **삭제**로 제거할 수 있습니다. `openid`는 필수로 고정되며, 빈 항목은 무시하고 중복 항목은 한 번만 전송합니다. Redirect URI는 현재 앱과 같은 origin의 별도 경로를 사용해야 합니다. 예를 들어 `http://localhost:3000/callback` 또는 `http://localhost:3000/auth/callback`입니다. 쿼리가 있는 Redirect URI는 지원하지 않습니다. `localhost`와 `127.0.0.1`은 서로 다른 origin이므로 로그인 도중 바꾸지 마세요.
 
 고급 설정에서 Token Endpoint 인증 방식을 선택할 수 있습니다. 기본은 `client_secret_basic`이며, `client_secret_post`와 공개 클라이언트용 `none`도 지원합니다. PKCE S256은 항상 사용합니다. 공개 클라이언트는 Secret을 비워 두세요.

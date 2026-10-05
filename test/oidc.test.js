@@ -147,6 +147,6 @@ test('Authorization Code 흐름: PKCE, 인증 방식, 응답 점검 및 오류 �
     assert.match((await fetch(`${origin}/callback?code=unknown`, { redirect: 'manual' })).headers.get('location'), /expired/);
   });
   await t.test('화면 및 정적 파일', async () => {
-    for (const path of ['/', '/app.js', '/style.css']) assert.equal((await fetch(origin + path)).status, 200);
+    for (const path of ['/', '/app.js', '/flow-model.js', '/style.css']) assert.equal((await fetch(origin + path)).status, 200);
   });
 });
